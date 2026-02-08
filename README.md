@@ -6,23 +6,6 @@ A high-performance, modular C pipeline for computing the hexatic order parameter
 
 ---
 
-## 🚀 Quick Start
-
-1.  **Clone:**
-    ```bash
-    git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
-    cd your-repo-name
-    ```
-2.  **Compile:**
-    ```bash
-    make
-    ```
-3.  **Run:**
-    ```bash
-    ./hexatic_g6_avg ./data/ 1000 1200 ./out/
-    ```
-
----
 
 ## 🌟 Overview
 
