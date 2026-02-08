@@ -7,7 +7,7 @@ A high-performance, modular C pipeline for computing the hexatic order parameter
 ---
 
 
-## 🌟 Overview
+##  Overview
 
 This project provides a complete analysis pipeline, starting from raw particle coordinate files (`time_*.dat`) and ending with a single, averaged `g6_avg.dat` file.
 
@@ -25,7 +25,7 @@ It is designed for analyzing 2D systems (like active matter or molecular simulat
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 * **Geometrically Correct:** Uses the **Delaunay Triangulation** (via the `Triangle` library) to find true neighbors, not a k-NN approximation.
 * **Modular by Design:** Each step (I/O, clustering, psi6, etc.) is in its own `.c`/`.h` module.
