@@ -129,6 +129,41 @@ void graccum_accumulate(GrAccum *A,
     A->nframes += 1;
 }
 
+
+static double gr_value(const GrBin *bin){
+    if(!bin) return 0.0;
+    if(bin->ideal_pairs_sum <= 0.0) return 0.0;
+    return (double)bin->pair_count / bin->ideal_pairs_sum;
+}
+
+double graccum_estimate_first_peak_a(const GrAccum *A){
+    if(!A || !A->bins || A->nbins < 3) return -1.0;
+
+    int first_local_peak = -1;
+    int global_peak = -1;
+    double global_peak_val = -1.0;
+
+    for(int b = 1; b < A->nbins - 1; ++b){
+        double gm = gr_value(&A->bins[b - 1]);
+        double g0 = gr_value(&A->bins[b]);
+        double gp = gr_value(&A->bins[b + 1]);
+
+        if(g0 > global_peak_val){
+            global_peak_val = g0;
+            global_peak = b;
+        }
+
+        if(first_local_peak < 0 && g0 > gm && g0 >= gp && g0 > 1.0){
+            first_local_peak = b;
+        }
+    }
+
+    int pick = (first_local_peak >= 0) ? first_local_peak : global_peak;
+    if(pick < 0 || pick >= A->nbins) return -1.0;
+
+    return A->bins[pick].r_center;
+}
+
 int graccum_write(GrAccum *A,
                   const char *outpath,
                   int t0,

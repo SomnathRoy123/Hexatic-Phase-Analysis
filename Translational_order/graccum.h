@@ -15,6 +15,11 @@ void graccum_accumulate(GrAccum *A,
                         double box_x,
                         double box_y);
 
+/* Estimate lattice spacing a from the first peak in averaged g(r).
+ * Returns >0 on success, <=0 when no valid peak found.
+ */
+double graccum_estimate_first_peak_a(const GrAccum *A);
+
 int graccum_write(GrAccum *A,
                   const char *outpath,
                   int t0,
