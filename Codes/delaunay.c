@@ -98,10 +98,23 @@ IntArray *triangulate_get_neighbors(const Vec2Array *points,
     if(!neighbors){ fprintf(stderr,"triangulate: OOM neighbors\n"); free(in.pointlist); if(out.pointlist) trifree(out.pointlist); if(out.edgelist) trifree(out.edgelist); if(out.trianglelist) trifree(out.trianglelist); return NULL; }
     for(int i=0;i<M;i++) ia_init(&neighbors[i]);
 
-    /* Scan edges and add unique neighbor pairs (map image indices back to originals with %M) */
+    /*
+     * Scan edges and add unique neighbor pairs.
+     *
+     * For PBC runs we triangulate a 3x3 tiled point set (original + 8 images).
+     * We must only keep edges touching the central (original) tile; otherwise
+     * edges entirely between image tiles can fold back (via %M) into artificial
+     * long-range neighbors in the original box.
+     */
     for(int e=0; e < out.numberofedges; e++){
         int p1 = out.edgelist[e*2 + 0];
         int p2 = out.edgelist[e*2 + 1];
+
+        if(use_pbc){
+            int p1_is_central = (p1 < M);
+            int p2_is_central = (p2 < M);
+            if(!p1_is_central && !p2_is_central) continue;
+        }
 
         /* Map to original index [0..M-1] */
         int o1 = p1 % M;
