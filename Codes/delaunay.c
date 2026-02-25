@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #define REAL double
 #include "triangle.h"  /* Triangle API; ensure this is available at compile time */
@@ -122,6 +123,24 @@ IntArray *triangulate_get_neighbors(const Vec2Array *points,
 
         /* Ignore self-edge */
         if(o1 == o2) continue;
+
+        if(use_pbc){
+            /*
+             * Keep only edges consistent with the minimum-image displacement
+             * between the mapped originals. This rejects central-image links
+             * to a non-nearest periodic copy that can appear in the tiled mesh.
+             */
+            double ex = in.pointlist[p2*2 + 0] - in.pointlist[p1*2 + 0];
+            double ey = in.pointlist[p2*2 + 1] - in.pointlist[p1*2 + 1];
+
+            double mx = points->data[o2].x - points->data[o1].x;
+            double my = points->data[o2].y - points->data[o1].y;
+            mx = mic_delta(mx, box_x);
+            my = mic_delta(my, box_y);
+
+            const double eps = 1e-9;
+            if(fabs(ex - mx) > eps || fabs(ey - my) > eps) continue;
+        }
 
         /* Add o2 to neighbors of o1 if not present */
         if(!neighbor_has(&neighbors[o1], o2)) ia_push(&neighbors[o1], o2);
