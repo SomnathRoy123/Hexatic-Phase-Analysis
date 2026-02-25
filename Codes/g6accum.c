@@ -97,6 +97,17 @@ void g6accum_accumulate(G6Accum *A,
     int M = (int)coms->n;
     if(M < 2) return;
 
+    /*
+     * In periodic boxes, isotropic radial correlations are only reliable up to
+     * half the smallest box length. Larger r values mix wrapped directions and
+     * can create artificial flat tails.
+     */
+    double max_valid_r = INFINITY;
+    if(use_pbc){
+        max_valid_r = 0.5 * fmin(box_x, box_y);
+        if(max_valid_r <= 0.0) return;
+    }
+
     /* First pass: find rmax to know how many bins we need */
     double rmax = 0.0;
     for(int i=0;i<M-1;i++){
@@ -108,6 +119,7 @@ void g6accum_accumulate(G6Accum *A,
                 dy = mic_delta(dy, box_y);
             }
             double r2 = dx*dx + dy*dy;
+            if(use_pbc && r2 > max_valid_r*max_valid_r) continue;
             if(r2 > rmax*rmax) rmax = sqrt(r2);
         }
     }
@@ -124,6 +136,7 @@ void g6accum_accumulate(G6Accum *A,
                 dy = mic_delta(dy, box_y);
             }
             double r = sqrt(dx*dx + dy*dy);
+            if(use_pbc && r > max_valid_r) continue;
             int b = (int)floor(r / A->dr);
             if(b < 0 || b >= A->nbins) continue;
 
@@ -159,7 +172,9 @@ int g6accum_write(G6Accum *A,
     fprintf(f, "# Columns: r_center  Re[g6(r)]  Im[g6(r)]  |g6(r)|  pair_count\n");
     fprintf(f, "# Params: dr = %.8g  lbond = %.8g  USE_PBC = %s\n", A->dr, lbond, use_pbc ? "true" : "false");
     if(use_pbc){
+        double rcut = 0.5 * fmin(box_x, box_y);
         fprintf(f, "# Box dims: %.8g x %.8g\n", box_x, box_y);
+        fprintf(f, "# PBC radial cutoff applied: r <= %.8g\n", rcut);
     }
 
     for(int b=0;b<A->nbins;b++){
