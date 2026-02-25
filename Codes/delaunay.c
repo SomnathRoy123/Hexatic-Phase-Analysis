@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #define REAL double
 #include "triangle.h"  /* Triangle API; ensure this is available at compile time */
@@ -98,10 +99,23 @@ IntArray *triangulate_get_neighbors(const Vec2Array *points,
     if(!neighbors){ fprintf(stderr,"triangulate: OOM neighbors\n"); free(in.pointlist); if(out.pointlist) trifree(out.pointlist); if(out.edgelist) trifree(out.edgelist); if(out.trianglelist) trifree(out.trianglelist); return NULL; }
     for(int i=0;i<M;i++) ia_init(&neighbors[i]);
 
-    /* Scan edges and add unique neighbor pairs (map image indices back to originals with %M) */
+    /*
+     * Scan edges and add unique neighbor pairs.
+     *
+     * For PBC runs we triangulate a 3x3 tiled point set (original + 8 images).
+     * We must only keep edges touching the central (original) tile; otherwise
+     * edges entirely between image tiles can fold back (via %M) into artificial
+     * long-range neighbors in the original box.
+     */
     for(int e=0; e < out.numberofedges; e++){
         int p1 = out.edgelist[e*2 + 0];
         int p2 = out.edgelist[e*2 + 1];
+
+        if(use_pbc){
+            int p1_is_central = (p1 < M);
+            int p2_is_central = (p2 < M);
+            if(!p1_is_central && !p2_is_central) continue;
+        }
 
         /* Map to original index [0..M-1] */
         int o1 = p1 % M;
@@ -109,6 +123,24 @@ IntArray *triangulate_get_neighbors(const Vec2Array *points,
 
         /* Ignore self-edge */
         if(o1 == o2) continue;
+
+        if(use_pbc){
+            /*
+             * Keep only edges consistent with the minimum-image displacement
+             * between the mapped originals. This rejects central-image links
+             * to a non-nearest periodic copy that can appear in the tiled mesh.
+             */
+            double ex = in.pointlist[p2*2 + 0] - in.pointlist[p1*2 + 0];
+            double ey = in.pointlist[p2*2 + 1] - in.pointlist[p1*2 + 1];
+
+            double mx = points->data[o2].x - points->data[o1].x;
+            double my = points->data[o2].y - points->data[o1].y;
+            mx = mic_delta(mx, box_x);
+            my = mic_delta(my, box_y);
+
+            const double eps = 1e-9;
+            if(fabs(ex - mx) > eps || fabs(ey - my) > eps) continue;
+        }
 
         /* Add o2 to neighbors of o1 if not present */
         if(!neighbor_has(&neighbors[o1], o2)) ia_push(&neighbors[o1], o2);
